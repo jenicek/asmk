@@ -1,6 +1,17 @@
 # Python ASMK (Aggregated Selective Match Kernels)
 
-Official ASMK Python implementation for our [ECCV 2020 paper](https://arxiv.org/abs/2007.13172):
+This is a Python implementation of the ASMK approach published in [ICCV 2013](http://hal.inria.fr/docs/00/86/46/84/PDF/iccv13_tolias.pdf):
+
+```
+@InProceedings{TAJ13,
+  author       = "Giorgos Tolias and Yannis Avrithis and Herv\'e J\'egou",
+  title        = "To aggregate or not to aggregate: Selective match kernels for image search",
+  booktitle    = "IEEE International Conference on Computer Vision",
+  year         = "2013"
+}
+```
+
+This package is provided to support image retrieval with local descriptors and to reproduce the results of our [ECCV 2020 paper](https://arxiv.org/abs/2007.13172) with HOW deep local descriptors:
 
 ```
 @InProceedings{TJ20,
@@ -10,6 +21,10 @@ Official ASMK Python implementation for our [ECCV 2020 paper](https://arxiv.org/
   year        = "2020"
 }
 ```
+
+There are minor differences compared to the original ASMK approach (ICCV'13) and [implementation](https://github.com/gtolias/asmk), which are described in our ECCV'20 paper. Using the provided package to run ASMK with  other local descriptors is straightforward. 
+
+
 
 ## Running the Code
 
@@ -41,7 +56,7 @@ export PYTHONPATH=${PYTHONPATH}:$(realpath cnnimageretrieval-pytorch-master)
 4. Run `examples/demo_how.py` giving it any `.yaml` parameter file from `examples/params/*.yml`
 
 
-### Reproducing ECCV 2020 Results
+### Reproducing ECCV 2020 results with HOW local descriptors
 
 Reproducing results from **Table 2.**
 
