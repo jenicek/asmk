@@ -1,5 +1,6 @@
 """Helper functions related to io"""
 
+import os.path
 import logging
 import pickle
 import urllib.request
@@ -11,7 +12,22 @@ import yaml
 def load_params(path):
     """Return loaded parameters from a yaml file"""
     with open(path, "r") as handle:
-        return yaml.safe_load(handle)
+        content = yaml.safe_load(handle)
+    if "__template__" in content:
+        # Treat template as defaults
+        template = load_params(os.path.join(os.path.dirname(path), content.pop("__template__")))
+        content = dict_deep_overlay(template, content)
+    return content
+
+def dict_deep_overlay(defaults, params):
+    """If defaults and params are both dictionaries, perform deep overlay (use params value for
+        keys defined in params, otherwise use defaults value)"""
+    if isinstance(defaults, dict) and isinstance(params, dict):
+        for key in params:
+            defaults[key] = dict_deep_overlay(defaults.get(key, None), params[key])
+        return defaults
+
+    return params
 
 
 # Logging

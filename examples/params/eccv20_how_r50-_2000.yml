@@ -1,0 +1,6 @@
+# Demo scenario for HOW descriptors with Resnet 50 backbone, without the last block
+
+__template__: eccv20_how_r50-_1000.yml
+
+demo_how:
+  features_number: 2000

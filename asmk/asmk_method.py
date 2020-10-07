@@ -9,8 +9,18 @@ from . import io_helpers
 
 
 class ASMKMethod:
-    """Class to keep necessary objects and provide easy access to asmk method's steps. Each step
-        of asmk method corresponds to one method."""
+    """
+    Class to keep necessary objects and provide easy access to asmk method's steps. Each step
+    of asmk method corresponds to one method. Use initialize_untrained() class method instead
+    of directly calling the constructor.
+
+    :param dict params: contains keys index, train_codebook, build_ivf and query_ivf, each
+        containing the corresponding step parameters
+    :param dict metadata: only stored by this object, never changed
+    :param Codebook codebook: object from the codebook module
+    :param ASMKKernel kernel: object from the kernel module
+    :param IVF inverted_file: object from the inverted_file module
+    """
 
     def __init__(self, params, metadata, *, codebook=None, kernel=None, inverted_file=None):
         self.params = params
@@ -23,7 +33,7 @@ class ASMKMethod:
 
     @classmethod
     def initialize_untrained(cls, params):
-        """Initialize asmk method before training"""
+        """Initialize asmk method before training, provided only params (see constructor docs)"""
         return cls(params, {})
 
     #
@@ -31,8 +41,15 @@ class ASMKMethod:
     #
 
     def train_codebook(self, vecs, *, cache_path=None, step_params=None):
-        """The first step of the method - training codebook (or loading from cache). Return new
-            ASMKMethod object, do not change self."""
+        """The first step of the method - training the codebook (or loading from cache)
+
+        :param ndarray vecs: 2D numpy array, rows are vectors for codebook training
+        :param str cache_path: trained codebook will be stored under given file path and loaded
+            next time without training (None to turn off)
+        :param dict step_params: parameters that will override stored parameters for this step
+            (self.params['train_codebook'])
+        :return: new ASMKMethod object (containing metadata of this step), do not change self
+        """
         assert not self.codebook, "Codebook already trained"
         index_factory = idx_pkg.initialize_faiss_index(**self.params['index'])
         step_params = step_params or self.params.get("train_codebook")
@@ -57,8 +74,16 @@ class ASMKMethod:
 
 
     def build_ivf(self, vecs, imids, *, cache_path=None, step_params=None):
-        """The second step of the method - building the ivf (or loading from cache). Return new
-            ASMKMethod object, do not change self."""
+        """The second step of the method - building the ivf (or loading from cache)
+
+        :param ndarray vecs: 2D numpy array, rows are vectors to be indexed by the ivf
+        :param ndarray imids: 1D numpy array of image ids corresponding to 'vecs'
+        :param str cache_path: built ivf will be stored under given file path and loaded
+            next time without training (None to turn off)
+        :param dict step_params: parameters that will override stored parameters for this step
+            (self.params['build_ivf'])
+        :return: new ASMKMethod object (containing metadata of this step), do not change self
+        """
         assert not self.kernel and not self.inverted_file, "Inverted file already built"
         step_params = step_params or self.params.get("build_ivf")
         kern = kern_pkg.ASMKKernel(self.codebook, **step_params['kernel'])
@@ -87,8 +112,15 @@ class ASMKMethod:
 
 
     def query_ivf(self, qvecs, qimids, *, step_params=None):
-        """The last step of the method - querying the ivf. Return tuple (metadata, images, ranks,
-            scores), do not change self."""
+        """The last step of the method - querying the ivf
+
+        :param ndarray qvecs: 2D numpy array, rows are vectors, each acting as a query for the ivf
+        :param ndarray qimids: 1D numpy array of image ids corresponding to 'qvecs'
+        :param dict step_params: parameters that will override stored parameters for this step
+            (self.params['query_ivf'])
+        :return: tuple (dict metadata, ndarray images, 2D ndarray ranks, 2D ndarray scores), do not
+            change self
+        """
 
         step_params = step_params or self.params.get("query_ivf")
 

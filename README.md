@@ -22,7 +22,7 @@ This package is provided to support image retrieval with local descriptors and t
 }
 ```
 
-There are minor differences compared to the original ASMK approach (ICCV'13) and [implementation](https://github.com/gtolias/asmk), which are described in our ECCV'20 paper. Using the provided package to run ASMK with  other local descriptors is straightforward. 
+There are minor differences compared to the original ASMK approach (ICCV'13) and [implementation](https://github.com/gtolias/asmk), which are described in our ECCV'20 paper. Using the provided package to run ASMK with other local descriptors is straightforward.
 
 
 
@@ -60,4 +60,6 @@ export PYTHONPATH=${PYTHONPATH}:$(realpath cnnimageretrieval-pytorch-master)
 
 Reproducing results from **Table 2.**
 
-- R18<sub>how</sub> (n = 1000): &nbsp; `examples/demo_how.py eccv20_how_r18_5` &ensp; _ROxf (M): 75.1, RPar (M): 79.4_
+- R18<sub>how</sub> (n = 1000): &nbsp; `examples/demo_how.py eccv20_how_r18_1000` &ensp; _ROxf (M): 75.1, RPar (M): 79.4_
+- -R50<sub>how</sub> (n = 1000): &nbsp; `examples/demo_how.py eccv20_how_r50-_1000` &ensp; _ROxf (M): 78.3, RPar (M): 80.1_
+- -R50<sub>how</sub> (n = 2000): &nbsp; `examples/demo_how.py eccv20_how_r50-_2000` &ensp; _ROxf (M): 79.4, RPar (M): 81.6_

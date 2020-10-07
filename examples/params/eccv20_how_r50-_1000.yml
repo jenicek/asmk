@@ -1,10 +1,11 @@
-# Demo scenario
+# Demo scenario for HOW descriptors with Resnet 50 backbone, without the last block
 
 demo_how:
   data_folder: data # Path relative to the package root (can be absolute path)
   datasets: [roxford5k, rparis6k] # Datasets to evaluate on
   codebook_dataset: sfm120k_subset20k # Dataset to train the codebook on
-  features_name: how_r18_5 # Name of the local features (will be downloaded for datasets and codebook_dataset)
+  features_name: how_r50- # Name of the local features (will be downloaded for datasets and codebook_dataset)
+  features_number: 1000 # Number of features that were extracted per image
 
 # General properties
 
