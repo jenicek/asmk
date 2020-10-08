@@ -3,4 +3,5 @@
 __template__: eccv20_how_r50-_1000.yml
 
 demo_how:
-  features_name: how_r18
+  eval_features: how_r18_1000
+  codebook_features: how_r18_1000

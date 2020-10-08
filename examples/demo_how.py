@@ -22,15 +22,15 @@ def initialize(params, demo_params, globals, logger):
     logger.info(f"ECCV20 demo with parameters '{globals['exp_path'].name}'")
 
     # Download featues
-    features = ["%s_%s_%s.pkl" % (x, demo_params['features_name'], demo_params['features_number']) \
-                    for x in demo_params['datasets']]
-    features.append("%s_%s_1000.pkl" % (demo_params['codebook_dataset'],
-                                        demo_params['features_name']))
+    features = ["%s_%s.pkl" % (x, demo_params['eval_features']) \
+                    for x in demo_params['eval_datasets']]
+    features.append("%s_%s.pkl" % (demo_params['codebook_dataset'],
+                                   demo_params['codebook_features']))
     io_helpers.download_files(features, globals['root_path'] / "features", FEATURES_URL,
                               logfunc=logger.info)
 
     # Download test datasets
-    pkls = ["%s/gnd_%s.pkl" % (x, x) for x in demo_params['datasets']]
+    pkls = ["%s/gnd_%s.pkl" % (x, x) for x in demo_params['eval_datasets']]
     io_helpers.download_files(pkls, globals['root_path'] / "test", DATASETS_URL,
                               logfunc=logger.info)
 
@@ -42,7 +42,7 @@ def train_codebook(asmk, demo_params, globals, logger):
     """The first step of asmk method - training the codebook"""
     codebook_path = f"{globals['exp_path']}/codebook.pkl"
     features_path = f"{globals['root_path']}/features/{demo_params['codebook_dataset']}_" \
-                    f"{demo_params['features_name']}_1000.pkl"
+                    f"{demo_params['codebook_features']}.pkl"
 
     desc = io_helpers.load_pickle(features_path)
     logger.info(f"Loaded descriptors for codebook")
@@ -92,10 +92,9 @@ def demo_how(params, globals, logger):
     asmk = train_codebook(asmk, demo_params, globals, logger)
 
     # Create db and evaluate datasets
-    for dataset in demo_params['datasets']:
+    for dataset in demo_params['eval_datasets']:
         desc = io_helpers.load_pickle(f"{globals['root_path']}/features/{dataset}_" \
-                                      f"{demo_params['features_name']}_" \
-                                      f"{demo_params['features_number']}.pkl")
+                                      f"{demo_params['eval_features']}.pkl")
         logger.info(f"Loaded DB and query descriptors for {dataset}")
 
         asmk_dataset = build_ivf(asmk, dataset, desc, globals, logger)
