@@ -27,6 +27,7 @@ setup(
     ext_modules=[Extension("asmk.hamming", ["cython/hamming.c"])],
     install_requires=[
         "numpy",
+        "pyaml",
     ],
     cmdclass={
         "install": InstallWrapper,

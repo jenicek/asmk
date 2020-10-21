@@ -31,7 +31,7 @@ There are minor differences compared to the original ASMK approach (ICCV'13) and
 1. Install the requirements (`faiss-cpu` for cpu-only setup)
 
 ```
-pip3 install numpy faiss-gpu
+pip3 install pyaml numpy faiss-gpu
 ```
 
 
