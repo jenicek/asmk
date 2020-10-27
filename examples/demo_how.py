@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os
+import os.path
 import sys
 import time
 import argparse
@@ -121,7 +121,9 @@ def main(args):
         # Resolve data folders
         globals = {}
         globals["root_path"] = (package_root / params['demo_how']['data_folder'])
-        globals["exp_path"] = globals["root_path"] / Path(parameters_path).name[:-len(".yml")]
+        globals["root_path"].mkdir(parents=True, exist_ok=True)
+        exp_name = Path(parameters_path).name[:-len(".yml")]
+        globals["exp_path"] = (package_root / params['demo_how']['exp_folder']) / exp_name
         globals["exp_path"].mkdir(parents=True, exist_ok=True)
 
         # Setup logging

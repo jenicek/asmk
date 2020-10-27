@@ -18,8 +18,8 @@ class InstallWrapper(install):
 setup(
     name="asmk",
     version="0.1",
-    description="Official ASMK Python implementation for ECCV'20 paper Learning and " \
-                "aggregating deep local descriptors for instance-level recognition",
+    description="ASMK Python implementation for ECCV'20 paper \"Learning and aggregating deep " \
+                "local descriptors for instance-level recognition\"",
     author="Tomas Jenicek, Giorgos Tolias",
     packages=[
         "asmk",

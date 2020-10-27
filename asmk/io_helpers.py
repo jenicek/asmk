@@ -68,7 +68,7 @@ def save_pickle(path, data):
 # Download
 
 def download_files(names, root_path, base_url, logfunc=None):
-    """Download files from given url to given directory path. If logfunc given, use it to log
+    """Download file names from given url to given directory path. If logfunc given, use it to log
         status."""
     root_path = Path(root_path)
     for name in names:

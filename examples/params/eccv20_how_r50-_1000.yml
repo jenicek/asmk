@@ -1,7 +1,8 @@
 # Demo scenario for HOW descriptors with Resnet 50 backbone, without the last block
 
 demo_how:
-  data_folder: data # Path relative to the package root (can be absolute path)
+  data_folder: data # Data path relative to the package root (can be absolute path)
+  exp_folder: data/experiments # Experiment path relative to the package root (can be absolute path)
   eval_datasets: [roxford5k, rparis6k] # Datasets to evaluate on
   eval_features: how_r50-_1000 # Name of the local features for evaluation (will be downloaded for each dataset)
   codebook_dataset: sfm120k_subset20k # Dataset to train the codebook on
