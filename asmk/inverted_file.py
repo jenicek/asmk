@@ -106,12 +106,15 @@ class IVF:
     @property
     def stats(self):
         """Return a shallow dictionary with stats of the ivf"""
+        sum_counts = self.counts.sum()
+        imbalance_factor = self.counts.shape[0] * np.power(self.counts, 2).sum() / sum_counts**2
         return {
-            "vectors_per_image": self.counts.sum() / self.n_images,
+            "vectors_per_image": sum_counts / self.n_images,
             "mean_entries_per_vw": self.counts.mean(),
             "min_entries_per_vw": self.counts.min(),
             "max_entries_per_vw": self.counts.max(),
             "std_of_entries_per_vw": self.counts.std(),
+            "imbalance_factor_of_vw": imbalance_factor,
         }
 
 

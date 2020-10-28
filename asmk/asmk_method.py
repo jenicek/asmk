@@ -84,31 +84,44 @@ class ASMKMethod:
             (self.params['build_ivf'])
         :return: new ASMKMethod object (containing metadata of this step), do not change self
         """
+
+        builder = self.create_ivf_builder(cache_path=cache_path, step_params=step_params)
+
+        if not builder.loaded_from_cache:
+            # Skip if loaded, otherwise add everything at once
+            builder.add(vecs, imids)
+
+        return self.add_ivf_builder(builder)
+
+
+    def create_ivf_builder(self, *, cache_path=None, step_params=None):
+        """Part of the second step of the method, see build_ivf() method implementation for usage
+
+        :param str cache_path: built ivf will be stored under given file path and loaded
+            next time without training (None to turn off)
+        :param dict step_params: parameters that will override stored parameters for this step
+            (self.params['build_ivf'])
+        :return: IvfBuilder object
+        """
         assert not self.kernel and not self.inverted_file, "Inverted file already built"
         step_params = step_params or self.params.get("build_ivf")
         kern = kern_pkg.ASMKKernel(self.codebook, **step_params['kernel'])
 
-        if cache_path and os.path.exists(cache_path):
-            time0 = time.time()
-            ivf = ivf_pkg.IVF.initialize_from_state(io_helpers.load_pickle(cache_path))
-            metadata = {"load_time": time.time() - time0}
-        else:
-            ivf = ivf_pkg.IVF.initialize_empty(**step_params['ivf'],
-                                               codebook_params=self.codebook.params)
+        return IvfBuilder(step_params, self.codebook, kern, cache_path=cache_path)
 
-            time0 = time.time()
-            quantized = self.codebook.quantize(vecs, imids, **step_params["quantize"])
-            aggregated = kern.aggregate(*quantized, **step_params["aggregate"])
-            ivf.add(*aggregated)
-            metadata = {"index_time": time.time() - time0}
 
-            if cache_path:
-                io_helpers.save_pickle(cache_path, ivf.state_dict())
+    def add_ivf_builder(self, ivf_builder):
+        """Part of the second step of the method, see build_ivf() method implementation for usage
 
-        metadata['ivf_stats'] = ivf.stats
-        return self.__class__({**self.params, "build_ivf": step_params},
-                              {**self.metadata, "build_ivf": metadata},
-                              codebook=self.codebook, kernel=kern, inverted_file=ivf)
+        :param IvfBuilder ivf_builder: Builder with vectors added
+        :return: new ASMKMethod object (containing metadata from the builder), do not change self
+        """
+        ivf_metadata = ivf_builder.save()
+
+        return self.__class__({**self.params, "build_ivf": ivf_builder.step_params},
+                              {**self.metadata, "build_ivf": ivf_metadata},
+                              codebook=self.codebook, kernel=ivf_builder.kernel,
+                              inverted_file=ivf_builder.ivf)
 
 
     def query_ivf(self, qvecs, qimids, *, step_params=None):
@@ -153,3 +166,57 @@ class ASMKMethod:
             scores_all.append(scores[ranks])
 
         return np.array(imids_all), np.vstack(ranks_all), np.vstack(scores_all)
+
+
+class IvfBuilder:
+    """Inverted file (IVF) wrapper simplifying vector addition
+
+    :param dict step_params: contains parameters for build_ivf step
+    :param Codebook codebook: object from the codebook module
+    :param ASMKKernel kernel: object from the kernel module
+    :param str cache_path: built ivf will be stored under given file path and loaded
+        next time without training (None to turn off)
+    """
+
+    def __init__(self, step_params, codebook, kernel, *, cache_path):
+        self.step_params = step_params
+        self.codebook = codebook
+        self.kernel = kernel
+
+        if cache_path and os.path.exists(cache_path):
+            time0 = time.time()
+            self.ivf = ivf_pkg.IVF.initialize_from_state(io_helpers.load_pickle(cache_path))
+            self.metadata = {"load_time": time.time() - time0}
+            self.cache_path = None
+        else:
+            self.ivf = ivf_pkg.IVF.initialize_empty(**step_params['ivf'],
+                                                    codebook_params=codebook.params)
+            self.metadata = {"index_time": 0}
+            self.cache_path = cache_path
+
+    @property
+    def loaded_from_cache(self):
+        """If the contained IVF was loaded (otherwise, it is empty after initialization)"""
+        return "load_time" in self.metadata
+
+    def add(self, vecs, imids):
+        """Add descriptors and cooresponding image ids to the IVF
+
+        :param np.ndarray vecs: 2D array of local descriptors
+        :param np.ndarray imids: 1D array of image ids
+        """
+        time0 = time.time()
+        quantized = self.codebook.quantize(vecs, imids, **self.step_params["quantize"])
+        aggregated = self.kernel.aggregate(*quantized, **self.step_params["aggregate"])
+        self.ivf.add(*aggregated)
+        self.metadata['index_time'] += time.time() - time0
+
+    def save(self):
+        """Save to cache path if defined
+
+        :return: dict metadata with ivf stats
+        """
+        if self.cache_path:
+            io_helpers.save_pickle(self.cache_path, self.ivf.state_dict())
+
+        return {**self.metadata, "ivf_stats": self.ivf.stats}
