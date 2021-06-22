@@ -21,7 +21,8 @@ class TestFunctions(unittest.TestCase):
     def test_binarize_and_pack(self):
         for dim1 in range(1, 40):
             arr = (np.random.rand(dim1) - 0.5).astype(np.float32)
-            self.assertTrue(np.allclose(self._numpy_pack_uint32(np.expand_dims(arr, 0) > 0).squeeze(), hamming.binarize_and_pack(arr)))
+            self.assertTrue(np.allclose(self._numpy_pack_uint32(np.expand_dims(arr, 0) > 0).squeeze(),
+                                        hamming.binarize_and_pack(arr)))
 
     def test_binarize_and_pack_2D(self):
         for dim1 in range(1, 40):
@@ -32,10 +33,12 @@ class TestFunctions(unittest.TestCase):
         for dim1 in range(100, 140):
             arr1 = (np.random.rand(1, dim1) - 0.5).astype(np.float32)
             arr2 = (np.random.rand(1, dim1) - 0.5).astype(np.float32)
-            res = hamming.hamming_dist_packed(hamming.binarize_and_pack_2D(arr1).squeeze(0), hamming.binarize_and_pack_2D(arr2).squeeze(0), dim1)
+            res = hamming.hamming_dist_packed(hamming.binarize_and_pack_2D(arr1).squeeze(0),
+                                              hamming.binarize_and_pack_2D(arr2).squeeze(0), dim1)
             if dim1 % 32 == 0:
                 # Test default behaviour
-                res = hamming.hamming_dist_packed(hamming.binarize_and_pack_2D(arr1).squeeze(0), hamming.binarize_and_pack_2D(arr2).squeeze(0))
+                res = hamming.hamming_dist_packed(hamming.binarize_and_pack_2D(arr1).squeeze(0),
+                                                  hamming.binarize_and_pack_2D(arr2).squeeze(0))
             self.assertTrue(np.allclose(res, cdist(arr1 > 0, arr2 > 0, 'hamming').squeeze()))
 
     def test_hamming_cdist_packed(self):
@@ -44,6 +47,8 @@ class TestFunctions(unittest.TestCase):
             arr2 = (np.random.rand(10, dim1) - 0.5).astype(np.float32)
             if dim1 % 32 == 0:
                 # Test default behaviour
-                res = hamming.hamming_cdist_packed(hamming.binarize_and_pack_2D(arr1), hamming.binarize_and_pack_2D(arr2))
-            res = hamming.hamming_cdist_packed(hamming.binarize_and_pack_2D(arr1), hamming.binarize_and_pack_2D(arr2), dim1)
+                res = hamming.hamming_cdist_packed(hamming.binarize_and_pack_2D(arr1),
+                                                   hamming.binarize_and_pack_2D(arr2))
+            res = hamming.hamming_cdist_packed(hamming.binarize_and_pack_2D(arr1),
+                                               hamming.binarize_and_pack_2D(arr2), dim1)
             self.assertTrue(np.allclose(res, cdist(arr1 > 0, arr2 > 0, 'hamming')))
