@@ -15,7 +15,8 @@ def load_params(path):
         content = yaml.safe_load(handle)
     if "__template__" in content:
         # Treat template as defaults
-        template = load_params(os.path.join(os.path.dirname(path), content.pop("__template__")))
+        template_path = os.path.expanduser(content.pop("__template__"))
+        template = load_params(os.path.join(os.path.dirname(path), template_path))
         content = dict_deep_overlay(template, content)
     return content
 

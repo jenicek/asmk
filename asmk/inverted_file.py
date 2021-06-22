@@ -77,7 +77,7 @@ class IVF:
                 self.norm_factor[image_ids[i]] += 1
 
 
-    def search(self, des, word_ids, similarity_func):
+    def search(self, des, word_ids, similarity_func, topk):
         """Search in this ivf with given descriptors and corresponding visual word ids. Return
             similarity computed by provided function downweighted by idf and accumulated for all
             visual words."""
@@ -97,7 +97,9 @@ class IVF:
             scores[image_ids] += sim
             q_norm_factor += self.idf[word]**2
 
-        return scores / np.sqrt(q_norm_factor)
+        scores = scores / np.sqrt(q_norm_factor)
+        ranks = np.argsort(-scores)[:topk]
+        return ranks, scores[ranks]
 
     #
     # Load, save and stats
