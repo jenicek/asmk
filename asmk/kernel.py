@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from . import hamming
+from . import functional, hamming
 
 
 class ASMKKernel:
@@ -36,7 +36,7 @@ class ASMKKernel:
             if self.params["binary"]:
                 ades[i] = hamming.binarize_and_pack(residual.astype(np.float32))
             else:
-                ades[i] = normalize_vec_l2(np.expand_dims(residual, axis=0)).squeeze()
+                ades[i] = functional.normalize_vec_l2(np.expand_dims(residual, axis=0)).squeeze()
 
         return ades, unique_ids
 
@@ -76,10 +76,8 @@ class ASMKKernel:
         else:
             sim = np.matmul(vecs, qvec)
 
-        # Compute vw scores
-        mask = (sim>=similarity_threshold)
-        sim = np.power(sim[mask], alpha) # monomial kernel
-        return image_ids[mask], sim
+        return functional.asmk_kernel(sim, image_ids, alpha=alpha,
+                                      similarity_threshold=similarity_threshold)
 
     #
     # Load and save
@@ -97,11 +95,3 @@ class ASMKKernel:
         """Initialize from a previously stored state_dict given a codebook"""
         assert state["type"] == cls.__name__
         return cls(**state["params"], codebook=codebook)
-
-
-# Helper functions
-
-def normalize_vec_l2(vecs):
-    """Perform l2 normalization on each vector in a given matrix (axis 1)"""
-    norm = np.linalg.norm(vecs, ord=2, axis=1, keepdims=True) + 1e-6
-    return vecs / norm
