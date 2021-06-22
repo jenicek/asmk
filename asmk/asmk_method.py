@@ -40,7 +40,7 @@ class ASMKMethod:
     # Method steps
     #
 
-    def train_codebook(self, vecs, *, cache_path=None, step_params=None):
+    def train_codebook(self, *columns, cache_path=None, step_params=None):
         """The first step of the method - training the codebook (or loading from cache)
 
         :param ndarray vecs: 2D numpy array, rows are vectors for codebook training
@@ -51,7 +51,7 @@ class ASMKMethod:
         :return: new ASMKMethod object (containing metadata of this step), do not change self
         """
         assert not self.codebook, "Codebook already trained"
-        index_factory = idx_pkg.initialize_faiss_index(**self.params['index'])
+        index_factory = idx_pkg.initialize_index(**self.params['index'])
         step_params = step_params or self.params.get("train_codebook")
 
         if cache_path and os.path.exists(cache_path):
@@ -63,7 +63,7 @@ class ASMKMethod:
             metadata = {"load_time": time.time() - time0}
         else:
             cdb = cdb_pkg.Codebook(**step_params['codebook'], index_factory=index_factory)
-            metadata = cdb.train(vecs)
+            metadata = cdb.train(*columns)
             if cache_path:
                 io_helpers.save_pickle(cache_path, cdb.state_dict())
 
@@ -73,7 +73,7 @@ class ASMKMethod:
                               codebook=cdb)
 
 
-    def build_ivf(self, vecs, imids, *, cache_path=None, step_params=None):
+    def build_ivf(self, *columns, cache_path=None, step_params=None):
         """The second step of the method - building the ivf (or loading from cache)
 
         :param ndarray vecs: 2D numpy array, rows are vectors to be indexed by the ivf
@@ -89,7 +89,7 @@ class ASMKMethod:
 
         if not builder.loaded_from_cache:
             # Skip if loaded, otherwise add everything at once
-            builder.add(vecs, imids)
+            builder.add(*columns)
 
         return self.add_ivf_builder(builder)
 
@@ -124,7 +124,7 @@ class ASMKMethod:
                               inverted_file=ivf_builder.ivf)
 
 
-    def query_ivf(self, qvecs, qimids, *, step_params=None):
+    def query_ivf(self, *columns, step_params=None):
         """The last step of the method - querying the ivf
 
         :param ndarray qvecs: 2D numpy array, rows are vectors, each acting as a query for the ivf
@@ -139,7 +139,7 @@ class ASMKMethod:
 
         time0 = time.time()
         images, ranks, scores = self.accumulate_scores(self.codebook, self.kernel, \
-                                            self.inverted_file, qvecs, qimids, step_params)
+                                            self.inverted_file, *columns, params=step_params)
         metadata = {"query_avg_time": (time.time()-time0)/len(ranks)}
         return metadata, images, ranks, scores
 
@@ -199,14 +199,14 @@ class IvfBuilder:
         """If the contained IVF was loaded (otherwise, it is empty after initialization)"""
         return "load_time" in self.metadata
 
-    def add(self, vecs, imids):
+    def add(self, *columns):
         """Add descriptors and cooresponding image ids to the IVF
 
         :param np.ndarray vecs: 2D array of local descriptors
         :param np.ndarray imids: 1D array of image ids
         """
         time0 = time.time()
-        quantized = self.codebook.quantize(vecs, imids, **self.step_params["quantize"])
+        quantized = self.codebook.quantize(*columns, **self.step_params["quantize"])
         aggregated = self.kernel.aggregate(*quantized, **self.step_params["aggregate"])
         self.ivf.add(*aggregated)
         self.metadata['index_time'] += time.time() - time0

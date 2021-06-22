@@ -80,7 +80,7 @@ class IVF:
     def search(self, des, word_ids, similarity_func, topk):
         """Search in this ivf with given descriptors and corresponding visual word ids. Return
             similarity computed by provided function downweighted by idf and accumulated for all
-            visual words."""
+            visual words. Return topk results per query."""
         q_norm_factor = 0
         scores = np.zeros(self.n_images)
 
