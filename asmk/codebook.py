@@ -2,7 +2,6 @@
 
 import time
 import warnings
-
 import numpy as np
 
 
@@ -51,18 +50,14 @@ class Codebook:
     # Search in index
     #
 
-    def quantize(self, des, image_ids=None, *, multiple_assignment):
-        """Quantize given descriptors. If image_ids is None, act as if all descriptors come from
-            the same image. Multiple assignment can be applied when multiple_assignment > 1."""
+    def quantize(self, des, *cols, multiple_assignment):
+        """Quantize given descriptors. Additional cols can be given, and this function will make
+            sure, that they still correspond to returned descriptors. Multiple assignment can be
+            applied when multiple_assignment > 1."""
         _, centroid_ids = self.search_index.search(np.ascontiguousarray(des, dtype=np.float32),
                                                    multiple_assignment)
-        centroid_ids = centroid_ids.reshape(-1)
 
-        if multiple_assignment > 1:
-            des = np.repeat(des, multiple_assignment, 0)
-            image_ids = np.repeat(image_ids, multiple_assignment) if image_ids is not None else None
-
-        return des, centroid_ids, image_ids
+        return (des, centroid_ids) + cols
 
     #
     # Load and save

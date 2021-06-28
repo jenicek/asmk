@@ -1,11 +1,14 @@
 """Helper functions related to io"""
 
 import os.path
+import time
+import sys
 import logging
 import pickle
 import urllib.request
 from pathlib import Path
 import yaml
+import numpy as np
 
 # Params
 
@@ -52,6 +55,27 @@ def init_logger(log_path):
 
     return logger
 
+def progress(iterable, *, size=None, frequency=1, header=""):
+    """Generator that wraps an iterable and prints progress"""
+    if size is None:
+        size = len(iterable)
+    header = f"{header.capitalize()}: " if header else ""
+    charsize = len(str(size))
+    if frequency:
+        print(f"{header}[{'0'.rjust(charsize)}/{size}]", end="  ")
+        sys.stdout.flush()
+    time0 = time.time()
+    for i, element in enumerate(iterable):
+        yield element
+        i1 = i+1
+        if frequency and (i1 % frequency == 0 or i1 == size):
+            avg_time = (time.time() - time0) / i1
+            print(f"\r{header}[{str(i1).rjust(charsize)}/{size}] " \
+                    f"elapsed {int(avg_time*i1/60):02d}m/{int(avg_time*size/60):02d}m", end="  ")
+            sys.stdout.flush()
+    if frequency:
+        print()
+
 
 # Load and save state dicts
 
@@ -80,3 +104,16 @@ def download_files(names, root_path, base_url, logfunc=None):
             logfunc(f"Downloading file '{name}'")
         path.parent.mkdir(parents=True, exist_ok=True)
         urllib.request.urlretrieve(base_url + name, path)
+
+
+# Iteration
+
+def slice_unique(ids):
+    """Generate slices that mark a sequence of identical values in a given array of ids. The
+        sequence must be uninterrupted (compact)."""
+    pointer = 0
+    for i, counts in zip(*np.unique(ids, return_counts=True)):
+        seq = slice(pointer, pointer+counts)
+        assert (ids[seq] == i).all()
+        yield i, seq
+        pointer += counts

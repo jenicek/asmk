@@ -124,13 +124,14 @@ class ASMKMethod:
                               inverted_file=ivf_builder.ivf)
 
 
-    def query_ivf(self, *columns, step_params=None):
+    def query_ivf(self, *columns, step_params=None, progress=None):
         """The last step of the method - querying the ivf
 
         :param ndarray qvecs: 2D numpy array, rows are vectors, each acting as a query for the ivf
         :param ndarray qimids: 1D numpy array of image ids corresponding to 'qvecs'
         :param dict step_params: parameters that will override stored parameters for this step
             (self.params['query_ivf'])
+        :param bool progress: step at which update progress printing (None to disable)
         :return: tuple (dict metadata, ndarray images, 2D ndarray ranks, 2D ndarray scores), do not
             change self
         """
@@ -139,7 +140,7 @@ class ASMKMethod:
 
         time0 = time.time()
         images, ranks, scores = self.accumulate_scores(self.codebook, self.kernel, \
-                                            self.inverted_file, *columns, params=step_params)
+                                    self.inverted_file, *columns, params=step_params, progress=progress)
         metadata = {"query_avg_time": (time.time()-time0)/len(ranks)}
         return metadata, images, ranks, scores
 
@@ -149,22 +150,20 @@ class ASMKMethod:
     #
 
     @staticmethod
-    def accumulate_scores(cdb, kern, ivf, qvecs, qimids, params):
+    def accumulate_scores(cdb, kern, ivf, qvecs, qimids, params, *, progress=None):
         """Accumulate scores for every query image (qvecs, qimids) given codebook, kernel,
             inverted_file and parameters."""
         similarity_func = lambda *x: kern.similarity(*x, **params["similarity"])
 
-        imids_all, ranks_all, scores_all = [], [], []
-        for i in range(qimids.min(), qimids.max()+1):
-            qdes = qvecs[qimids==i]
-            quantized = cdb.quantize(qdes, **params["quantize"])
-            aggregated = kern.aggregate(*quantized, **params["aggregate"])
-            scores = ivf.search(*aggregated, **params["search"], similarity_func=similarity_func)
-            ranks = np.argsort(-scores)
-            imids_all.append(i)
-            ranks_all.append(ranks)
-            scores_all.append(scores[ranks])
+        acc = []
+        slices = list(io_helpers.slice_unique(qimids))
+        for imid, seq in io_helpers.progress(slices, frequency=progress, header="Query"):
+            quantized = cdb.quantize(qvecs[seq], **params["quantize"])
+            aggregated = kern.aggregate_image(*quantized, **params["aggregate"])
+            ranks, scores = ivf.search(*aggregated, **params["search"], similarity_func=similarity_func)
+            acc.append((imid, ranks, scores))
 
+        imids_all, ranks_all, scores_all = zip(*acc)
         return np.array(imids_all), np.vstack(ranks_all), np.vstack(scores_all)
 
 
@@ -199,16 +198,19 @@ class IvfBuilder:
         """If the contained IVF was loaded (otherwise, it is empty after initialization)"""
         return "load_time" in self.metadata
 
-    def add(self, *columns):
+    def add(self, *columns, progress=None):
         """Add descriptors and cooresponding image ids to the IVF
 
         :param np.ndarray vecs: 2D array of local descriptors
         :param np.ndarray imids: 1D array of image ids
+        :param bool progress: step at which update progress printing (None to disable)
         """
         time0 = time.time()
         quantized = self.codebook.quantize(*columns, **self.step_params["quantize"])
-        aggregated = self.kernel.aggregate(*quantized, **self.step_params["aggregate"])
-        self.ivf.add(*aggregated)
+        if progress:
+            print(">> Descriptors quantized")
+        aggregated = self.kernel.aggregate(*quantized, **self.step_params["aggregate"], progress=progress)
+        self.ivf.add(*aggregated, progress=200*progress if progress else None)
         self.metadata['index_time'] += time.time() - time0
 
     def save(self):

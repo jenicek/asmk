@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from . import functional, hamming
+from . import functional, hamming, io_helpers
 
 
 class ASMKKernel:
@@ -23,47 +23,31 @@ class ASMKKernel:
     # Aggregation
     #
 
-    def _aggregate_image(self, des, word_ids):
+    def aggregate_image(self, des, word_ids):
         """Aggregate descriptors (with corresponding visual word ids) for a single image"""
         unique_ids = np.unique(word_ids)
-
-        if self.binary:
-            # Storage for packed booleans
-            ades = np.empty((unique_ids.shape[0], int(np.ceil(des.shape[1] / 32))), dtype=np.uint32)
-        else:
-            ades = np.empty((unique_ids.shape[0], des.shape[1]), dtype=np.float32)
+        ades = np.empty((unique_ids.shape[0], des.shape[1]), dtype=np.float32)
 
         for i, word in enumerate(unique_ids):
-            residuals = des[word_ids==word] - self.codebook.centroids[word]
-            residual = residuals.sum(0)
+            ades[i] = (des[(word_ids==word).any(axis=1)] - self.codebook.centroids[word]).sum(0)
 
-            if self.params["binary"]:
-                ades[i] = hamming.binarize_and_pack(residual.astype(np.float32))
-            else:
-                ades[i] = functional.normalize_vec_l2(np.expand_dims(residual, axis=0)).squeeze()
+        if self.binary:
+            ades = hamming.binarize_and_pack_2D(ades)
+        else:
+            ades = functional.normalize_vec_l2(ades)
 
         return ades, unique_ids
 
-    def aggregate(self, des, word_ids, image_ids=None, **kwargs):
-        """Aggregate descriptors with corresponding visual word ids for corresponding image ids.
-            When image_ids is None, act as if all descriptors come from the same image."""
-        if image_ids is None:
-            return self._aggregate_image(des, word_ids)
+    def aggregate(self, des, word_ids, image_ids, *, progress=None, **kwargs):
+        """Aggregate descriptors with corresponding visual word ids for corresponding image ids"""
+        acc = []
+        slices = list(io_helpers.slice_unique(image_ids))
+        for imid, seq in io_helpers.progress(slices, frequency=progress, header="Aggregate"):
+            ades, ids = self.aggregate_image(des[seq], word_ids[seq], **kwargs)
+            acc.append((ades, ids, np.full(ids.shape[0], imid)))
 
-        agg_des, agg_word_ids, agg_image_ids = [], [], []
-        for image_id in np.unique(image_ids):
-            mask = (image_ids == image_id)
-            agg_des_incr, agg_word_ids_incr = \
-                    self._aggregate_image(des[mask], word_ids[mask], **kwargs)
-            agg_des.append(agg_des_incr)
-            agg_word_ids.append(agg_word_ids_incr)
-            agg_image_ids.append(np.full(agg_word_ids_incr.shape[0], image_id))
-
-        agg_des  = np.vstack(agg_des)
-        agg_word_ids = np.hstack(agg_word_ids)
-        agg_image_ids = np.hstack(agg_image_ids)
-
-        return agg_des, agg_word_ids, agg_image_ids
+        agg_des, agg_words, agg_imids = zip(*acc)
+        return np.vstack(agg_des), np.hstack(agg_words), np.hstack(agg_imids)
 
     #
     # Similarity

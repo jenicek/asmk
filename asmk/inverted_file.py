@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from . import io_helpers
+
 
 class IVF:
     """Inverted File for efficient feature indexation with idf support. Can be updated."""
@@ -50,7 +52,7 @@ class IVF:
         return arr
 
 
-    def add(self, des, word_ids, image_ids):
+    def add(self, des, word_ids, image_ids, *, progress=None):
         """Add descriptors with corresponding visual word ids and image ids to this ivf"""
         uniq_image_ids = np.unique(image_ids)
         assert uniq_image_ids.min() >= self.n_images # The next chunk must be consequtive
@@ -59,7 +61,8 @@ class IVF:
         self.norm_factor = np.concatenate((self.norm_factor, norm_append))
         self.n_images = np.max((self.n_images, uniq_image_ids.max() + 1))
 
-        for i, word in enumerate(word_ids):
+        for i, word in io_helpers.progress(enumerate(word_ids), size=len(word_ids),
+                                           frequency=progress, header="Index"):
             self.ivf_vecs[word] = self._append_to_np_array(self.ivf_vecs[word], self.counts[word],
                                                            des[i])
             self.ivf_image_ids[word] = self._append_to_np_array(self.ivf_image_ids[word],
@@ -76,7 +79,7 @@ class IVF:
                 self.norm_factor[image_ids[i]] += 1
 
 
-    def search(self, des, word_ids, similarity_func, topk):
+    def search(self, des, word_ids, *, similarity_func, topk):
         """Search in this ivf with given descriptors and corresponding visual word ids. Return
             similarity computed by provided function downweighted by idf and accumulated for all
             visual words. Return topk results per query."""
@@ -84,6 +87,7 @@ class IVF:
         q_norm_factor = 0
 
         for qvec, word in zip(des, word_ids):
+            q_norm_factor += self.idf[word]**2
             if self.ivf_image_ids[word] is None:
                 # Empty visual word
                 continue
@@ -94,7 +98,6 @@ class IVF:
             sim *= (self.idf[word]**2) # apply idf
             sim /= np.sqrt(self.norm_factor[image_ids]) # normalize
             scores[image_ids] += sim
-            q_norm_factor += self.idf[word]**2
 
         scores = scores / np.sqrt(q_norm_factor)
         ranks = np.argsort(-scores)[:topk]
@@ -112,6 +115,7 @@ class IVF:
         return {
             "vectors_per_image": sum_counts / self.n_images,
             "mean_entries_per_vw": self.counts.mean(),
+            "empty_vw": sum(1 for x in self.counts if x == 0),
             "min_entries_per_vw": self.counts.min(),
             "max_entries_per_vw": self.counts.max(),
             "std_of_entries_per_vw": self.counts.std(),
