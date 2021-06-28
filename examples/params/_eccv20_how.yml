@@ -17,7 +17,7 @@ index:
 
 train_codebook:
   codebook:
-    size: 65536 # Number of visual words (i.e. clusters of local features) in the codebook
+    size: "64k" # Number of visual words (i.e. clusters of local features) in the codebook
 
 build_ivf:
   kernel:

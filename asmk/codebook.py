@@ -6,6 +6,9 @@ import warnings
 import numpy as np
 
 
+SIZE_SHORTCUTS = {"1k": 1024, "2k": 2048, "4k": 4096, "8k": 8192, "16k": 16384, "32k": 32768,
+                  "64k": 65536, "128k": 131072, "256k": 262144, "512k": 524288}
+
 class Codebook:
     """Codebook of a fixed size for feature quantization"""
 
@@ -13,6 +16,7 @@ class Codebook:
         self.params = {
             "size": size,
         }
+        self.size = SIZE_SHORTCUTS.get(size, size)
 
         self.index_factory = index_factory
         self.search_index = None
@@ -26,8 +30,7 @@ class Codebook:
         """Index either provided or stored centroids (when centroids=None). Return a dictionary
             with 'index' key where value is how long it took to index the centroids."""
         if centroids is not None:
-            assert self.params["size"] == centroids.shape[0], \
-                    (self.params["size"], centroids.shape[0])
+            assert self.size == centroids.shape[0], (self.size, centroids.shape[0])
             self.centroids = centroids
         time0 = time.time()
         self.search_index = self.index_factory.create_index(self.centroids)
@@ -38,7 +41,7 @@ class Codebook:
             'cluster', 'index' and 'train' keys where the value is how long it took to cluster,
             index or train (sum of all)."""
         time0 = time.time()
-        centroids = self.index_factory.cluster(des, self.params["size"])
+        centroids = self.index_factory.cluster(des, self.size)
         time_taken = time.time() - time0
 
         meta = self.index(centroids)

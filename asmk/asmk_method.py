@@ -190,7 +190,7 @@ class IvfBuilder:
             self.cache_path = None
         else:
             self.ivf = ivf_pkg.IVF.initialize_empty(**step_params['ivf'],
-                                                    codebook_params=codebook.params)
+                                                    codebook_size=codebook.size)
             self.metadata = {"index_time": 0}
             self.cache_path = cache_path
 

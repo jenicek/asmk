@@ -8,10 +8,14 @@ from . import functional, hamming
 class ASMKKernel:
     """Kernel for ASMK with the option of binarization."""
 
+    binary_shortcuts = {"bin": True, "nobin": False}
+
     def __init__(self, codebook, *, binary):
         self.params = {
             "binary": binary,
         }
+        self.binary = self.binary_shortcuts.get(binary, binary)
+        assert self.binary in self.binary_shortcuts.values()
 
         self.codebook = codebook
 
@@ -23,7 +27,7 @@ class ASMKKernel:
         """Aggregate descriptors (with corresponding visual word ids) for a single image"""
         unique_ids = np.unique(word_ids)
 
-        if self.params["binary"]:
+        if self.binary:
             # Storage for packed booleans
             ades = np.empty((unique_ids.shape[0], int(np.ceil(des.shape[1] / 32))), dtype=np.uint32)
         else:
@@ -70,7 +74,7 @@ class ASMKKernel:
             corresponding image ids. Alpha is the similarity exponent after the similarity
             threshold is applied."""
         # Compute similarity with vw residuals for all other images
-        if self.params["binary"]:
+        if self.binary:
             norm_hdist = hamming.hamming_cdist_packed(qvec.reshape(1, -1), vecs)
             sim = -2*norm_hdist.squeeze(0) + 1 # normalized hamming dist -> similarity in [-1, 1]
         else:

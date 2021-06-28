@@ -20,9 +20,8 @@ class IVF:
 
 
     @classmethod
-    def initialize_empty(cls, *, codebook_params, **params):
+    def initialize_empty(cls, *, codebook_size, **params):
         """Return an empty IVF object given codebook params (size) and IVF params."""
-        codebook_size = codebook_params["size"]
         ivf_vecs = [None for _ in range(codebook_size)]
         ivf_image_ids = [None for _ in range(codebook_size)]
         counts = np.zeros(codebook_size, dtype=np.int32)
@@ -81,8 +80,8 @@ class IVF:
         """Search in this ivf with given descriptors and corresponding visual word ids. Return
             similarity computed by provided function downweighted by idf and accumulated for all
             visual words. Return topk results per query."""
-        q_norm_factor = 0
         scores = np.zeros(self.n_images)
+        q_norm_factor = 0
 
         for qvec, word in zip(des, word_ids):
             if self.ivf_image_ids[word] is None:
