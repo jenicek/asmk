@@ -80,7 +80,7 @@ def query_ivf(asmk, dataset, desc, globals, logger):
     metadata, _images, ranks, _scores = asmk.query_ivf(desc['qvecs'], desc['qimids'])
     logger.debug(f"Average query time (quant+aggr+search) is {metadata['query_avg_time']:.3f}s")
     gnd = configdataset(dataset, f"{globals['root_path']}/test/")['gnd']
-    compute_map_and_print(dataset, ranks.T, gnd)
+    io_helpers.capture_stdout(lambda: compute_map_and_print(dataset, ranks.T, gnd), logger)
 
 
 def demo_how(params, globals, logger):

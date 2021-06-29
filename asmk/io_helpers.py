@@ -6,6 +6,7 @@ import sys
 import logging
 import pickle
 import urllib.request
+from io import StringIO
 from pathlib import Path
 import yaml
 import numpy as np
@@ -75,6 +76,14 @@ def progress(iterable, *, size=None, frequency=1, header=""):
             sys.stdout.flush()
     if frequency:
         print()
+
+def capture_stdout(func, logger):
+    """Redirect stdout to logger"""
+    sys.stdout, stdout = StringIO(), sys.stdout
+    func()
+    sys.stdout, out_text = stdout, sys.stdout.getvalue()
+    for line in out_text.strip().split("\n"):
+        logger.info(line)
 
 
 # Load and save state dicts
