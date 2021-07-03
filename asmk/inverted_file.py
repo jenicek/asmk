@@ -8,7 +8,7 @@ from . import io_helpers
 class IVF:
     """Inverted File for efficient feature indexation with idf support. Can be updated."""
 
-    def __init__(self, norm_factor, n_images, ivf_vecs, ivf_image_ids, counts, idf, *, use_idf):
+    def __init__(self, norm_factor, n_images, ivf_vecs, ivf_image_ids, counts, idf, imid_offset, *, use_idf):
         self.params = {
             "use_idf": use_idf,
         }
@@ -19,6 +19,7 @@ class IVF:
         self.ivf_image_ids = ivf_image_ids
         self.counts = counts
         self.idf = idf
+        self.imid_offset = imid_offset
 
 
     @classmethod
@@ -30,7 +31,7 @@ class IVF:
         idf = np.ones(counts.shape, dtype=np.float32)
 
         return cls(**params, norm_factor=[], n_images=0, ivf_vecs=ivf_vecs,
-                   ivf_image_ids=ivf_image_ids, counts=counts, idf=idf)
+                   ivf_image_ids=ivf_image_ids, counts=counts, idf=idf, imid_offset=0)
 
     #
     # Index and search
@@ -46,7 +47,7 @@ class IVF:
         elif size >= arr.shape[0]:
             # Extension
             new_size = int(np.ceil(arr.shape[0] * increase_ratio))
-            arr.resize((new_size,) + arr.shape[1:], refcheck=False)
+            arr = np.resize(arr, (new_size,) + arr.shape[1:])
 
         arr[size] = item
         return arr
@@ -54,6 +55,7 @@ class IVF:
 
     def add(self, des, word_ids, image_ids, *, progress=None):
         """Add descriptors with corresponding visual word ids and image ids to this ivf"""
+        image_ids += self.imid_offset
         uniq_image_ids = np.unique(image_ids)
         assert uniq_image_ids.min() >= self.n_images # The next chunk must be consequtive
 
@@ -101,7 +103,7 @@ class IVF:
 
         scores = scores / np.sqrt(q_norm_factor)
         ranks = np.argsort(-scores)[:topk]
-        return ranks, scores[ranks]
+        return ranks - self.imid_offset, scores[ranks]
 
     #
     # Load, save and stats
@@ -135,6 +137,7 @@ class IVF:
                 "ivf_image_ids": self.ivf_image_ids,
                 "counts": self.counts,
                 "idf": self.idf,
+                "imid_offset": self.imid_offset,
             }
         }
 
@@ -142,4 +145,7 @@ class IVF:
     def initialize_from_state(cls, state):
         """Initialize from a previously stored state_dict given an index factory"""
         assert state["type"] == cls.__name__
+        if "imid_offset" not in state['state']:
+            # For backwards compatibility
+            state['state']['imid_offset'] = 0
         return cls(**state["params"], **state["state"])

@@ -73,11 +73,12 @@ class ASMKMethod:
                               codebook=cdb)
 
 
-    def build_ivf(self, *columns, cache_path=None, step_params=None):
+    def build_ivf(self, *columns, distractors_path=None, cache_path=None, step_params=None):
         """The second step of the method - building the ivf (or loading from cache)
 
         :param ndarray vecs: 2D numpy array, rows are vectors to be indexed by the ivf
         :param ndarray imids: 1D numpy array of image ids corresponding to 'vecs'
+        :param str distractors_path: ivf will be initialized with given distractors ivf path
         :param str cache_path: built ivf will be stored under given file path and loaded
             next time without training (None to turn off)
         :param dict step_params: parameters that will override stored parameters for this step
@@ -87,8 +88,10 @@ class ASMKMethod:
 
         builder = self.create_ivf_builder(cache_path=cache_path, step_params=step_params)
 
+        # Skip if loaded, otherwise add everything at once
         if not builder.loaded_from_cache:
-            # Skip if loaded, otherwise add everything at once
+            if distractors_path:
+                builder.initialize_with_distractors(distractors_path)
             builder.add(*columns)
 
         return self.add_ivf_builder(builder)
@@ -197,6 +200,11 @@ class IvfBuilder:
     def loaded_from_cache(self):
         """If the contained IVF was loaded (otherwise, it is empty after initialization)"""
         return "load_time" in self.metadata
+
+    def initialize_with_distractors(self, path):
+        """Initialize with distractors ivf at given path"""
+        self.ivf = ivf_pkg.IVF.initialize_from_state(io_helpers.load_pickle(path))
+        self.ivf.imid_offset = self.ivf.n_images
 
     def add(self, *columns, progress=None):
         """Add descriptors and cooresponding image ids to the IVF
