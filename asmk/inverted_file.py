@@ -56,12 +56,12 @@ class IVF:
     def add(self, des, word_ids, image_ids, *, progress=None):
         """Add descriptors with corresponding visual word ids and image ids to this ivf"""
         image_ids += self.imid_offset
-        uniq_image_ids = np.unique(image_ids)
-        assert uniq_image_ids.min() >= self.n_images # The next chunk must be consequtive
+        min_imid, max_imid = image_ids.min(), image_ids.max()
+        assert min_imid >= self.n_images # The next chunk must be consequtive
 
-        norm_append = np.zeros(uniq_image_ids.max() + 1 - len(self.norm_factor))
+        norm_append = np.zeros(max_imid + 1 - len(self.norm_factor))
         self.norm_factor = np.concatenate((self.norm_factor, norm_append))
-        self.n_images = np.max((self.n_images, uniq_image_ids.max() + 1))
+        self.n_images = np.max((self.n_images, max_imid + 1))
 
         for i, word in io_helpers.progress(enumerate(word_ids), size=len(word_ids),
                                            frequency=progress, header="Index"):
@@ -113,9 +113,10 @@ class IVF:
     def stats(self):
         """Return a shallow dictionary with stats of the ivf"""
         sum_counts = self.counts.sum()
-        imbalance_factor = self.counts.shape[0] * np.power(self.counts, 2).sum() / sum_counts**2
+        imbalance_factor = self.counts.shape[0] * np.power(self.counts, 2).sum() / (sum_counts**2 or 1)
         return {
-            "vectors_per_image": sum_counts / self.n_images,
+            "images": self.n_images,
+            "vectors_per_image": sum_counts / (self.n_images or 1),
             "mean_entries_per_vw": self.counts.mean(),
             "empty_vw": sum(1 for x in self.counts if x == 0),
             "min_entries_per_vw": self.counts.min(),
