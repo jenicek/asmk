@@ -5,9 +5,6 @@ import warnings
 import numpy as np
 
 
-SIZE_SHORTCUTS = {"1k": 1024, "2k": 2048, "4k": 4096, "8k": 8192, "16k": 16384, "32k": 32768,
-                  "64k": 65536, "128k": 131072, "256k": 262144, "512k": 524288}
-
 class Codebook:
     """Codebook of a fixed size for feature quantization"""
 
@@ -15,7 +12,10 @@ class Codebook:
         self.params = {
             "size": size,
         }
-        self.size = SIZE_SHORTCUTS.get(size, size)
+        if isinstance(size, str) and size[-1] in "kM":
+            size = int(size[:-1]) * {"k": 1024, "M": 1024**2}[size[-1]]
+        self.size = size
+        assert isinstance(self.size, int), self.size
 
         self.index_factory = index_factory
         self.search_index = None
@@ -42,7 +42,6 @@ class Codebook:
         time0 = time.time()
         centroids = self.index_factory.cluster(des, self.size)
         time_taken = time.time() - time0
-
         meta = self.index(centroids)
         return {**meta, "cluster_time": time_taken, "train_time": sum(meta.values()) + time_taken}
 

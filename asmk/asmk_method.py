@@ -153,7 +153,7 @@ class ASMKMethod:
     #
 
     @staticmethod
-    def accumulate_scores(cdb, kern, ivf, qvecs, qimids, params, *, progress=None):
+    def accumulate_scores(cdb, kern, ivf, qvecs, qimids, *cols, params, progress=None):
         """Accumulate scores for every query image (qvecs, qimids) given codebook, kernel,
             inverted_file and parameters."""
         similarity_func = lambda *x: kern.similarity(*x, **params["similarity"])
@@ -161,7 +161,7 @@ class ASMKMethod:
         acc = []
         slices = list(io_helpers.slice_unique(qimids))
         for imid, seq in io_helpers.progress(slices, frequency=progress, header="Query"):
-            quantized = cdb.quantize(qvecs[seq], **params["quantize"])
+            quantized = cdb.quantize(qvecs[seq], *(x[seq] for x in cols), **params["quantize"])
             aggregated = kern.aggregate_image(*quantized, **params["aggregate"])
             ranks, scores = ivf.search(*aggregated, **params["search"], similarity_func=similarity_func)
             acc.append((imid, ranks, scores))

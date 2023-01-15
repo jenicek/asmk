@@ -70,16 +70,18 @@ class IVF:
             self.ivf_image_ids[word] = self._append_to_np_array(self.ivf_image_ids[word],
                                                                 self.counts[word], image_ids[i])
             self.counts[word] += 1
+            self.norm_factor[image_ids[i]] += 1
 
             if self.params["use_idf"]:
-                self.idf[i] = np.log(self.n_images / self.counts[i])
+                self.idf[word] = np.log(self.n_images / self.counts[word])**2
 
-                norm_delta = self.idf[i]**2 # New norm for vw
-                norm_delta -= np.log(self.n_images / (self.counts[i]-1))**2 # Old norm for vw
-                self.norm_factor[image_ids[i]] += norm_delta
-            else:
-                self.norm_factor[image_ids[i]] += 1
-
+        if self.params["use_idf"]:
+            # Re-compute norm_factor to use idf
+            self.norm_factor[:] = 0
+            for word, imids in enumerate(self.ivf_image_ids):
+                if imids is not None:
+                    for imid in imids[:self.counts[word]]:
+                        self.norm_factor[imid] += self.idf[word]
 
     def search(self, des, word_ids, *, similarity_func, topk):
         """Search in this ivf with given descriptors and corresponding visual word ids. Return
@@ -89,7 +91,7 @@ class IVF:
         q_norm_factor = 0
 
         for qvec, word in zip(des, word_ids):
-            q_norm_factor += self.idf[word]**2
+            q_norm_factor += self.idf[word]
             if self.ivf_image_ids[word] is None:
                 # Empty visual word
                 continue
@@ -97,7 +99,7 @@ class IVF:
             image_ids, sim = similarity_func(qvec, self.ivf_vecs[word][:self.counts[word]],
                                              self.ivf_image_ids[word][:self.counts[word]])
 
-            sim *= (self.idf[word]**2) # apply idf
+            sim *= self.idf[word] # apply idf
             sim /= np.sqrt(self.norm_factor[image_ids]) # normalize
             scores[image_ids] += sim
 
